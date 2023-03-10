@@ -4,7 +4,6 @@ from Crypto.Random import random, get_random_bytes
 from Crypto.Util.Padding import pad
 import hashlib
 import time
-import utils
 
 #Socket destino
 HOST = '127.0.0.1'
