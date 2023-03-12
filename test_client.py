@@ -28,12 +28,12 @@ def send_mssg():
         previous_mssg = (plain_mssg, nonce, integrity_check)
     
     #Simulacion de ataque
-    is_attack = random.randint(0,8)
+    is_attack = random.randint(0,settings.MAX_RNG_VALUE)
     #Ataque de integridad
-    if is_attack > 3 and is_attack <= 5:
+    if is_attack > settings.UMBRAL_OK_MSSG and is_attack <= settings.UMBRAL_INTEGRITY_ERR:
         plain_mssg = f'From: ISBN123456789\tTo:ISBN987654321\tTransfer: {transaction*100} euros'.encode('utf-8')
     #Ataque de replicacion
-    elif is_attack > 5:
+    elif is_attack > settings.UMBRAL_INTEGRITY_ERR:
         plain_mssg, nonce, integrity_check = previous_mssg
 
     #Cifrado de mensaje
@@ -41,9 +41,9 @@ def send_mssg():
     print(cipher_mssg.hex())
     s.sendall(cipher_mssg)
     nonce_bytes = nonce.to_bytes(32,'big')
-    time.sleep(5)
+    time.sleep(1)
     s.sendall(nonce_bytes)
-    time.sleep(5)
+    time.sleep(1)
     s.sendall(integrity_check.digest())
     previous_mssg = (plain_mssg, nonce, integrity_check)
 
@@ -79,11 +79,11 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     previous_mssg = (None,None,None)
     
     for i in range(1,settings.DAYS+1):
-        daymssgs:int = random.randint(2,settings.MAX_MSSGS_PER_DAY)
+        daymssgs:int = random.randint(settings.MIN_MSSGS_PER_DAY,settings.MAX_MSSGS_PER_DAY)
         s.sendall(daymssgs.to_bytes(32,byteorder='big'))
         for i in range(1,daymssgs+1):
             send_mssg()
-            time.sleep(5)
+            time.sleep(1)
     
     
     

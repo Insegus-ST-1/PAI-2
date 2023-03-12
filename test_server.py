@@ -42,18 +42,22 @@ def log_mssg(client,message,code,file):
     lock.release()
 
 def log_daily_res(log_data, file):
-    global lock
+    global lock,mensual_log
     lock.acquire()
-    text = f'Resultados del dia {log_data[0]}:\nMensajes recibidos: {log_data[1]}\tMensajes comprometidos: {log_data[2]} ({round(log_data[2]/log_data[1]*100, 2)}%)\tMensajes replicados: {log_data[3]} ({round(log_data[3]/log_data[1]*100,2)}%)'
+    text = f'Resultados del dia {log_data[0]}:\nMensajes recibidos: {log_data[1]}\tMensajes comprometidos: {log_data[2]} ({round(log_data[2]/log_data[1]*100, 2)}%)\tMensajes replicados: {log_data[3]} ({round(log_data[3]/log_data[1]*100,2)}%)\n'
     with open(file, 'a') as f:
         f.write(text)
+    
+    separator = '==================================================================\n'
+    with open(mensual_log,'a') as f:
+        f.write(text+separator)
     lock.release()
 
 def log_mensual(data, file):
     global lock
     lock.acquire()
-    text = f'Resultados mensuales:\nSe han realizado un total de {data[0]} transaccciones, de las cuales, se han producido {data[1]+data[2]} ({round((data[1]+data[2])/data[0]*100,2)} %) errores\nErrores de integridad: {data[1]} ({round(data[1]/data[0]*100,2)} %)\tErrores de replicacion: {data[2]} ({round(data[2]/data[0]*100,2)})'
-    with open(file, 'w') as f:
+    text = f'Resultados mensuales:\nSe han realizado un total de {data[0]} transaccciones, de las cuales, se han producido {data[1]+data[2]} ({round((data[1]+data[2])/data[0]*100,2)} %) errores\nErrores de integridad: {data[1]} ({round(data[1]/data[0]*100,2)} %)\tErrores de replicacion: {data[2]} ({round(data[2]/data[0]*100,2)} %)\nSe han realizado {serverdb.total_access} accesos a la base de datos en un tiempo total de {serverdb.total_time} segundos, lo que equivale a una media de {serverdb.total_time/serverdb.total_access} segundos por acceso'
+    with open(file, 'a') as f:
         f.write(text)
     lock.release()
 
@@ -111,17 +115,19 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
         
         #Cliente envia mensaje cifrado a servidor
         serverdb.create_db()
+        mensual_log = 'files/mensual_report.txt'
+        create_log_file(mensual_log)
         for i in range(1,settings.DAYS+1):
             file = f'files/log_{i}.txt'
             create_log_file(file)
             daymssgs = int.from_bytes(conn.recv(32), byteorder='big')
             error, replica = 0, 0
-            for i in range(1,daymssgs+1):
+            for j in range(1,daymssgs+1):
                 rcv_mssg()
             log_data = (i,daymssgs,error,replica)
             log_daily_res(log_data=log_data,file=file)
             serverdb.daily_log_res(log_data)
-        mensual_log = 'files/mensual_report.txt'
+        
         mensual_data = serverdb.mensual_report()
         log_mensual(data=mensual_data,file=mensual_log)
         serverdb.close_db()
